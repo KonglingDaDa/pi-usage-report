@@ -84,7 +84,7 @@ export function buildReportHtml(records: UsageRecord[], meta: ReportMeta): strin
 </head>
 <body>
   <h1><svg class="mark" width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="9" width="4" height="9" rx="1" fill="#58a6ff"/><rect x="8" y="5" width="4" height="13" rx="1" fill="#3fb950"/><rect x="14" y="2" width="4" height="16" rx="1" fill="#d29922"/></svg>PI 用量报表</h1>
-  <div class="meta">生成时间：${genAt} · 默认范围：${rangeLabel} · 数据来源：~/.pi/agent/extensions-data/usage-report/</div>
+  <div class="meta">生成时间：${genAt} · 默认范围：${rangeLabel} · 每 10 分钟自动刷新 · 数据来源：~/.pi/agent/extensions-data/usage-report/</div>
   <div class="range-bar" id="rangeBar"></div>
   <div class="filters">
     <label>仓库 <select id="fProject"><option value="">全部仓库</option></select></label>
@@ -114,6 +114,15 @@ export function buildReportHtml(records: UsageRecord[], meta: ReportMeta): strin
     const DAY_LABELS = { 1: '今日', 7: '7 天', 30: '30 天', 90: '90 天' };
     let DAYS = ${meta.days === null ? "null" : meta.days};
     let F_PROJECT = '', F_MODEL = '';
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('pi-usage-report') || 'null');
+      if (saved && DAYS_OPTIONS.indexOf(saved.DAYS) >= 0) DAYS = saved.DAYS;
+      if (saved && typeof saved.FP === 'string') F_PROJECT = saved.FP;
+      if (saved && typeof saved.FM === 'string') F_MODEL = saved.FM;
+    } catch {}
+    function saveFilters() {
+      try { sessionStorage.setItem('pi-usage-report', JSON.stringify({ DAYS: DAYS, FP: F_PROJECT, FM: F_MODEL })); } catch {}
+    }
 
     const fmtInt = n => n.toLocaleString('en-US');
     const fmtTok = n => n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
@@ -149,7 +158,7 @@ export function buildReportHtml(records: UsageRecord[], meta: ReportMeta): strin
       const b = document.createElement('button');
       b.textContent = d === null ? '全部' : DAY_LABELS[d];
       if (d === DAYS) b.className = 'active';
-      b.onclick = () => { DAYS = d; bar.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'active'; renderAll(); };
+      b.onclick = () => { DAYS = d; bar.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'active'; saveFilters(); renderAll(); };
       bar.appendChild(b);
     });
 
@@ -160,8 +169,9 @@ export function buildReportHtml(records: UsageRecord[], meta: ReportMeta): strin
     const selP = document.getElementById('fProject'), selM = document.getElementById('fModel');
     projects.forEach(p => selP.add(new Option(p, p)));
     modelKeys.forEach(k => selM.add(new Option(k, k)));
-    selP.onchange = () => { F_PROJECT = selP.value; renderAll(); };
-    selM.onchange = () => { F_MODEL = selM.value; renderAll(); };
+    selP.value = F_PROJECT; selM.value = F_MODEL;
+    selP.onchange = () => { F_PROJECT = selP.value; saveFilters(); renderAll(); };
+    selM.onchange = () => { F_MODEL = selM.value; saveFilters(); renderAll(); };
 
     function filtered() {
       let cut = null;
@@ -316,6 +326,7 @@ export function buildReportHtml(records: UsageRecord[], meta: ReportMeta): strin
     }
 
     renderAll();
+    setTimeout(function(){ location.reload(); }, 600000);
   })();
   </script>
 </body>

@@ -20,7 +20,7 @@ pi install git:github.com/KonglingDaDa/pi-usage-report
 
 报表会在浏览器中打开；也可以直接打开 `~/.pi/agent/extensions-data/usage-report/usage-report.html`。
 
-页面功能：今日 / 7 天 / 30 天 / 90 天 / 全部切换，今日视图按小时出趋势；仓库、模型两个下拉筛选全图联动；URL 加 `?sub` 只看子代理用量。
+页面功能：今日 / 7 天 / 30 天 / 90 天 / 全部切换，今日视图按小时出趋势；仓库、模型两个下拉筛选全图联动；URL 加 `?sub` 只看子代理用量。Pi 在跑时每 10 分钟自动重写 HTML，打开的页面也会每 10 分钟刷新（筛选会记住）。
 
 ## 数据
 

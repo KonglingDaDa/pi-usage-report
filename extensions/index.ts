@@ -260,8 +260,41 @@ function loadRecords(days: number | null): UsageRecord[] {
 	return out;
 }
 
+const HTML_PATH = path.join(DATA_DIR, "usage-report.html");
+const AUTO_REFRESH_MS = 10 * 60 * 1000;
+
+function writeReportHtml(days: number | null): { path: string; count: number } {
+	const records = loadRecords(days);
+	fs.writeFileSync(HTML_PATH, buildReportHtml(records, { days, generatedAt: Date.now() }), "utf8");
+	return { path: HTML_PATH, count: records.length };
+}
+
+function scheduleAutoRefresh(): void {
+	const regen = (): void => {
+		try {
+			if (loadRecords(null).length === 0) return;
+			writeReportHtml(null);
+		} catch (e) {
+			console.error("[usage-report] 自动刷新失败:", e);
+		}
+	};
+	const kick = setTimeout(() => {
+		let age = Infinity;
+		try {
+			age = Date.now() - fs.statSync(HTML_PATH).mtimeMs;
+		} catch {
+			age = Infinity;
+		}
+		if (age > AUTO_REFRESH_MS) regen();
+	}, 3000);
+	kick.unref();
+	const iv = setInterval(regen, AUTO_REFRESH_MS);
+	iv.unref();
+}
+
 export default function (pi: ExtensionAPI) {
 	fs.mkdirSync(DATA_DIR, { recursive: true });
+	scheduleAutoRefresh();
 
 	const appendRecord = (m: {
 		stopReason: string;
@@ -316,15 +349,12 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const records = loadRecords(days);
-
 			if (records.length === 0) {
 				ctx.ui.notify(days === null ? "还没有任何用量记录" : `最近 ${days} 天没有用量记录`, "warning");
 				return;
 			}
-
-			const outPath = path.join(DATA_DIR, "usage-report.html");
-			fs.writeFileSync(outPath, buildReportHtml(records, { days, generatedAt: Date.now() }), "utf8");
-			ctx.ui.notify(`用量报表已生成：${outPath}（${records.length} 条记录）`, "info");
+			const { path: outPath, count } = writeReportHtml(days);
+			ctx.ui.notify(`用量报表已生成：${outPath}（${count} 条记录）`, "info");
 			openInBrowser(outPath);
 		},
 	});
