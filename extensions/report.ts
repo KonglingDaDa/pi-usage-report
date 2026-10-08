@@ -130,23 +130,30 @@ export function buildReportHtml(records: UsageRecord[], meta: ReportMeta): strin
 
     // ---- 模型图标：品牌 SVG（icons.ts）+ 白色圆角底片，未知厂商用字母块兜底 ----
     const LETTER_COLORS = { cursor: '#000000', other: '#8b949e' };
-    function iconKey(model) {
-      const m = model.toLowerCase();
-      if (/gpt|openai|codex|^o[134]/.test(m)) return 'openai';
-      if (/claude|anthropic|kiro/.test(m)) return 'anthropic';
-      if (/gemini|google|palm|bard/.test(m)) return 'google';
-      if (/deepseek/.test(m)) return 'deepseek';
-      if (/grok|xai|x-ai/.test(m)) return 'xai';
-      if (/kimi|moonshot/.test(m)) return 'moonshot';
-      if (/qwen|alibaba|dashscope|tongyi/.test(m)) return 'qwen';
-      if (/glm|zhipu|chatglm/.test(m)) return 'zhipu';
-      if (/composer|cursor/.test(m)) return 'cursor';
+    function iconKey(full) {
+      const m = full.toLowerCase();
+      const model = m.split('/').pop() || m;
+      if (/composer/.test(model)) return 'cursor';
+      if (/mimo/.test(model)) return 'mimo';
+      if (/gpt|codex|^o[134]|openai/.test(model)) return 'openai';
+      if (/claude|anthropic/.test(model)) return 'anthropic';
+      if (/gemini|palm|bard/.test(model)) return 'google';
+      if (/deepseek/.test(model)) return 'deepseek';
+      if (/grok/.test(model) || /xai|x-ai/.test(m)) return 'xai';
+      if (/kimi|moonshot/.test(model)) return 'moonshot';
+      if (/qwen|tongyi/.test(model)) return 'qwen';
+      if (/glm|chatglm|zhipu/.test(model) || /zai-org/.test(m)) return 'zhipu';
+      if (/cursor/.test(m)) return 'cursor';
       return 'other';
+    }
+    function uniqSvg(svg) {
+      const u = 'g' + Math.random().toString(36).slice(2, 8);
+      return svg.split('id="').join('id="' + u + '-').split('url(#').join('url(#' + u + '-');
     }
     function iconSvg(model) {
       const k = iconKey(model);
       const brand = BRAND_ICONS[k];
-      if (brand) return '<span class="icon brand" style="background:' + (brand[2] || '#fff') + '">' + brand[0] + '</span>';
+      if (brand) return '<span class="icon brand" style="background:' + (brand[2] || '#fff') + '">' + uniqSvg(brand[0]) + '</span>';
       const c = LETTER_COLORS[k] || LETTER_COLORS.other;
       const t = (model.split('/').pop() || '?').charAt(0).toUpperCase();
       return '<svg class="icon" width="18" height="18" viewBox="0 0 16 16"><rect width="16" height="16" rx="4" fill="' + c + '"/><text x="8" y="12" font-size="9.5" font-weight="700" text-anchor="middle" fill="#fff">' + t + '</text></svg>';
